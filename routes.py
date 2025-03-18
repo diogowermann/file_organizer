@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, jsonify
 from organizer import organize_files
 import tkinter as tk
 from tkinter import filedialog
-from scheduler import scheduler, scheduled_task, start_scheduler
+from scheduler import scheduler, schedule_task, start_scheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
 file_organizer_routes = Blueprint("file_organizer", __name__)
@@ -49,23 +49,9 @@ def schedule_organization():
     interval_minutes = int(data.get("interval_minutes", 10))  # Default: 10 minutes
 
     if not source_folder or not destination_folder or not rules:
-        return jsonify({"error": "Missing required fields"}), 400
+        return jsonify({"error": "Missing required fields"}), 400    
 
-    job_id = "file_organizer_job"
-    
-    # Remove any existing job with the same ID
-    scheduler.remove_job(job_id, jobstore=None) if scheduler.get_job(job_id) else None
-
-    # Schedule the task
-    scheduler.add_job(
-        scheduled_task,
-        trigger=IntervalTrigger(minutes=interval_minutes),
-        args=[source_folder, destination_folder, rules],
-        id=job_id,
-        replace_existing=True,
-        misfire_grace_time=60  # Allow jobs to run up to 60 seconds late
-    )
-
+    schedule_task(source_folder, destination_folder, rules, interval_minutes)
     return jsonify({"message": f"File organization scheduled every {interval_minutes} minutes."}), 200
 
 @file_organizer_routes.route("/cancel-schedule", methods=["POST"])
